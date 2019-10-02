@@ -7,51 +7,41 @@
 #include "bats.h"
 #include "queue.h"
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t mutex_array[5];
+pthread_cond_t cond_array[5];
 
-Queue* queue_array[4];
 int total_car_number = 0;
 
-void* BAT_behaviour(void* arg){
-    BAT* car_ptr = (BAT*)arg;
-    BAT car = *car_ptr;
-    printf("BAT %d %c chegou no cruzamento\n", car.car_number, toupper(car.direction));
-    pthread_mutex_lock(&mutex);
-    printf("[BAT %d %c] I AM DOING STUFF MKAY...\n", car.car_number, toupper(car.direction));
-    sleep(1);
-    printf("BAT %d %c saiu no cruzamento\n", car.car_number, toupper(car.direction));
-    pthread_mutex_unlock(&mutex);
-    return NULL;
-}
 
 void* BAT_manager(char* arg){
-//  TODO:Criar threads de filas (4)
-//  TODO:Para cada char da string, criar novo carro, \
-
-    Queue* queueN = create_queue();
-    queue_array[0] = queueN;
-    Queue* queueE = create_queue();
-    queue_array[1] = queueE;
-    Queue* queueS = create_queue();
-    queue_array[2] = queueS;
-    Queue* queueW = create_queue();
-    queue_array[3] = queueW;
-    char* directions_string =  arg;
-    char current_direction = directions_string[0];
-    int car_number = 0;
-    while (current_direction != '\n'){
-        pthread_t* new_car_thread = malloc(sizeof(pthread_t));
-        car_number++;
-        total_car_number++;
-        pthread_mutex_lock(&mutex);
-        BAT* new_car_BAT = new_BAT(current_direction, total_car_number, new_car_thread);
-        pthread_mutex_unlock(&mutex);
-        pthread_create(new_car_thread, NULL, BAT_behaviour, new_car_BAT);
-        current_direction = directions_string[car_number];
-    }
     printf("[BATMAN]I am DONE!...\n");
     return NULL;
+
+}
+
+void initialize_thread_array(){
+    pthread_mutex_t main_mutex, north_queue_mutex, east_queue_mutex, south_queue_mutex, west_queue_mutex;
+    pthread_cond_t main, north_queue, east_queue, south_queue, west_queue;
+    pthread_mutex_init(&main_mutex, NULL);
+    pthread_mutex_init(&north_queue_mutex, NULL);
+    pthread_mutex_init(&east_queue_mutex, NULL);
+    pthread_mutex_init(&south_queue_mutex, NULL);
+    pthread_mutex_init(&west_queue_mutex, NULL);
+    pthread_cond_init(&main, NULL);
+    pthread_cond_init(&north_queue, NULL);
+    pthread_cond_init(&east_queue, NULL);
+    pthread_cond_init(&south_queue, NULL);
+    pthread_cond_init(&west_queue, NULL);
+    cond_array[0] = main;
+    cond_array[1] = north_queue;
+    cond_array[2] = east_queue;
+    cond_array[3] = south_queue;
+    cond_array[4] = west_queue;
+    mutex_array[0] = main_mutex;
+    mutex_array[1] = north_queue_mutex;
+    mutex_array[2] = east_queue_mutex;
+    mutex_array[3] = south_queue_mutex;
+    mutex_array[4] = west_queue_mutex;
 
 }
 
@@ -60,11 +50,10 @@ int main() {
     char    *buffer;
     size_t  n = 1024;
     buffer = malloc(n);
+    initialize_thread_array();
 
     // While an empty line is not read, continue reading
     while(getline(&buffer, &n, stdin) != 1){
-//        pthread_t batman;
-//        pthread_create(&batman, NULL, BAT_manager, buffer);
         BAT_manager(buffer);
     }
     printf("Bye Bye!\n");
