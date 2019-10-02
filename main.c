@@ -38,7 +38,7 @@ void* queue_start(void* arg){
     Directions queue_dir = *dir_ptr;
     pthread_cond_signal(&cond_array[0]);
     printf("[QUEUE %c]I AM ALIVE\n", enum_to_chr(queue_dir));
-    printf("[QUEUE %c]I going to sleep real quick...\n", enum_to_chr(queue_dir));
+    printf("[QUEUE %c]I am going to sleep real quick...\n", enum_to_chr(queue_dir));
     pthread_cond_wait(&cond_array[queue_dir], &mutex_array[queue_dir]);
     printf("[QUEUE %c]DID YOU WAKE ME UP MORTAL?\n", enum_to_chr(queue_dir));
     sleep(1);
