@@ -10,46 +10,31 @@
 pthread_mutex_t mutex_array[5];
 pthread_cond_t cond_array[5];
 pthread_t dir_array[4];
+Queue* priority_queue[4];
 
 int total_car_number = 0;
-Directions dir;
 
-char enum_to_chr(Directions dir){
-    char chr_dir;
-    switch (dir){
-        case NORTH:
-            chr_dir = 'N';
-            break;
-        case EAST:
-            chr_dir = 'E';
-            break;
-        case SOUTH:
-            chr_dir = 'S';
-            break;
-        case WEST:
-            chr_dir = 'W';
-            break;
-    }
-    return chr_dir;
-}
 
 void* queue_start(void* arg){
     Directions* dir_ptr = (Directions*) arg;
     Directions queue_dir = *dir_ptr;
+    int i = 0;
     pthread_cond_signal(&cond_array[0]);
-    printf("[QUEUE %c]I AM ALIVE\n", enum_to_chr(queue_dir));
-    printf("[QUEUE %c]I am going to sleep real quick...\n", enum_to_chr(queue_dir));
-    pthread_cond_wait(&cond_array[queue_dir], &mutex_array[queue_dir]);
-    printf("[QUEUE %c]DID YOU WAKE ME UP MORTAL?\n", enum_to_chr(queue_dir));
-    sleep(1);
-    printf("[QUEUE %c] I am finna go now\n", enum_to_chr(queue_dir));
+    printf("[QUEUE %c]I am going to wait for the carty cars!\n", enum_to_chr(queue_dir));
+//    Waiting for permission to make carts go
+    while(i != 3){
+        pthread_cond_wait(&cond_array[queue_dir], &mutex_array[queue_dir]);
+        i++;
+        printf("[QUEUE %c] CART WENT VROOM VROOM\n", enum_to_chr(queue_dir));
+        pthread_cond_signal(&cond_array[0]);
+    }
+    printf("[QUEUE %c]I am done! Bye Bye...\n", enum_to_chr(queue_dir));
     pthread_exit(NULL);
-
 }
 
 void* BAT_manager(char* dir_string){
     printf("[BATMAN]Starting BATMAN with - %s", dir_string);
-    dir =  NORTH;
+    Directions dir =  NORTH;
     pthread_create(&dir_array[0], NULL, queue_start, &dir);
     pthread_cond_wait(&cond_array[0], &mutex_array[0]);
     dir = EAST;
@@ -61,7 +46,19 @@ void* BAT_manager(char* dir_string){
     dir = WEST;
     pthread_create(&dir_array[3], NULL, queue_start, &dir);
     pthread_cond_wait(&cond_array[0], &mutex_array[0]);
-    printf("[BATMAN] MY WORK HERE IS DONE!");
+
+    printf("[BATMAN] Threads created, now carty cars!\n");
+    char current_dir = dir_string[0];
+    Directions enum_current_dir;
+    int i = 0;
+    while (current_dir != '\n'){
+        enum_current_dir = chr_to_enum(current_dir);
+        pthread_cond_signal(&cond_array[enum_current_dir]);
+        pthread_cond_wait(&cond_array[0], &mutex_array[0]);
+        i++;
+        current_dir = dir_string[i];
+    }
+    printf("[BATMAN] MORTAL, I AM D O N E!\n");
     return NULL;
 
 }
@@ -91,6 +88,16 @@ void initialize_thread_array(){
     mutex_array[2] = east_queue_mutex;
     mutex_array[3] = south_queue_mutex;
     mutex_array[4] = west_queue_mutex;
+
+    Queue* north = create_queue();
+    Queue* east = create_queue();
+    Queue* south = create_queue();
+    Queue* west = create_queue();
+
+    priority_queue[0] = north;
+    priority_queue[1] = east;
+    priority_queue[2] = south;
+    priority_queue[3] = west;
 
 }
 
