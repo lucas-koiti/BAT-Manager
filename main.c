@@ -20,15 +20,16 @@ void* queue_start(void* arg){
     Directions queue_dir = *dir_ptr;
     int i = 0;
     pthread_cond_signal(&cond_array[0]);
-    printf("[QUEUE %c]I am going to wait for the carty cars!\n", enum_to_chr(queue_dir));
+    /*printf("[QUEUE %c]I am going to wait for the carty cars!\n", enum_to_chr(queue_dir));*/
 //    Waiting for permission to make carts go
     while(i != 3){
-        pthread_cond_wait(&cond_array[queue_dir], &mutex_array[queue_dir]);
+        pthread_cond_wait(&cond_array[queue_dir], &mutex);
         i++;
-        printf("[QUEUE %c] CART WENT VROOM VROOM\n", enum_to_chr(queue_dir));
+        /*printf("[QUEUE %c] CART WENT VROOM VROOM\n", enum_to_chr(queue_dir));*/
+
         pthread_cond_signal(&cond_array[0]);
     }
-    printf("[QUEUE %c]I am done! Bye Bye...\n", enum_to_chr(queue_dir));
+    /*printf("[QUEUE %c]I am done! Bye Bye...\n", enum_to_chr(queue_dir));*/
     pthread_exit(NULL);
 }
 
@@ -51,7 +52,7 @@ void BAT_manager_init(){
 void arrive(Directions dir){
     BAT* current_car = new_car(total_car_number, dir);
     total_car_number++;
-    printf("BAT %d %c chegou no cruzamento\n", current_car->car_number, enum_to_chr(current_car->dir));
+    printf("BAT %d %c chegou no cruzamento\n", current_car->car_number, toupper(current_car->dir));
     switch (current_car->dir){
         case NORTH:
             push(priority_queue[0], current_car);
@@ -69,7 +70,7 @@ void arrive(Directions dir){
 }
 
 void car_exit(BAT* current_car){
-    printf("BAT %d from %c saiu do cruzamento\n", current_car->car_number, enum_to_chr(current_car->dir));
+    printf("BAT %d %c saiu do cruzamento\n", current_car->car_number, enum_to_chr(current_car->dir));
     switch (current_car->dir){
         case NORTH:
             pop(priority_queue[0]);
@@ -105,7 +106,8 @@ void* BAT_manager(char* dir_string){
     while (current_dir != '\n'){
         enum_current_dir = chr_to_enum(current_dir);
         pthread_cond_signal(&cond_array[enum_current_dir]);
-        pthread_cond_wait(&cond_array[0], &mutex_array[0]);
+        arrive(current_dir);
+        pthread_cond_wait(&cond_array[0], &mutex);
         i++;
         current_dir = dir_string[i];
     }
