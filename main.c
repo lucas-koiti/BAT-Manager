@@ -110,79 +110,6 @@ void BAT_manager_init(){
     pthread_cond_wait(&cond_array[0], &mutex);
 }
 
-
-void arrive(Directions dir){
-    BAT* current_car = new_car(total_car_number, dir);
-    total_car_number++;
-    printf("BAT %d %c chegou no cruzamento\n", current_car->car_number, toupper(current_car->dir));
-    switch (current_car->dir){
-        case NORTH:
-            push(priority_queue[0], current_car);
-            break;
-        case EAST:
-            push(priority_queue[1], current_car);
-            break;
-        case SOUTH:
-            push(priority_queue[2], current_car);
-            break;
-        case WEST:
-            push(priority_queue[3], current_car);
-            break;
-    }
-}
-
-void car_exit(BAT* current_car){
-    printf("BAT %d %c saiu do cruzamento\n", current_car->car_number, enum_to_chr(current_car->dir));
-    switch (current_car->dir){
-        case NORTH:
-            pop(priority_queue[0]);
-            break;
-        case EAST:
-            pop(priority_queue[1]);
-            break;
-        case SOUTH:
-            pop(priority_queue[2]);
-            break;
-        case WEST:
-            pop(priority_queue[3]);
-            break;
-    }
-}
-
-void cross(BAT* current_car){
-    pthread_mutex_lock(&mutex);
-    sleep(1);
-    car_exit(current_car);
-    pthread_mutex_unlock(&mutex);
-}
-
-
-void* BAT_manager(char* dir_string){
-    printf("[BATMAN]Starting BATMAN with - %s", dir_string);
-    BAT_manager_init();
-
-    printf("[BATMAN] Threads created, now carty cars!\n");
-    char current_dir = dir_string[0];
-    Directions enum_current_dir;
-    int i = 0;
-    while (current_dir != '\n'){
-        enum_current_dir = chr_to_enum(current_dir);
-        pthread_cond_signal(&cond_array[enum_current_dir]);
-        arrive(current_dir);
-        pthread_cond_wait(&cond_array[0], &mutex);
-        i++;
-        current_dir = dir_string[i];
-    }
-    printf("[BATMAN] MORTAL, I AM D O N E!\n");
-    return NULL;
-
-    bit_mask[0] = 0;
-    bit_mask[1] = 0;
-    bit_mask[2] = 0;
-    bit_mask[3] = 0;
-
-}
-
 void initialize_thread_array(){
     pthread_mutex_t main_mutex;
     pthread_cond_t main, north_queue, east_queue, south_queue, west_queue;
@@ -210,19 +137,4 @@ void initialize_thread_array(){
     priority_queue[1] = east;
     priority_queue[2] = south;
     priority_queue[3] = west;
-}
-
-int main() {
-    printf("Starting program!\n");
-    char    *buffer;
-    size_t  n = 1024;
-    buffer = malloc(n);
-    initialize_thread_array();
-
-    // While an empty line is not read, continue reading
-    while(getline(&buffer, &n, stdin) != 1){
-        BAT_manager(buffer);
-    }
-    printf("Bye Bye!\n");
-    return 0;
 }
