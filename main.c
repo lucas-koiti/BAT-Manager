@@ -1,18 +1,80 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
 #include <string.h>
-#include <unistd.h>
 #include <pthread.h>
 #include "bats.h"
 #include "queue.h"
+#include "global.h"
 
-pthread_mutex_t mutex;
-pthread_cond_t cond_array[5];
-pthread_t dir_array[4];
-Queue* priority_queue[4];
+void initialize_thread_array();
+void BAT_manager_init();
+void* BAT_manager(char* dir_string);
+void* queue_start(void* arg);
+void check();
 
-int total_car_number = 0;
+int main() {
+    printf("Starting program!\n");
+    char    *buffer;
+    size_t  n = 1024;
+    buffer = malloc(n);
+    initialize_thread_array();
+
+    // While an empty line is not read, continue reading
+    while(getline(&buffer, &n, stdin) != 1){
+        BAT_manager(buffer);
+    }
+    printf("Bye Bye!\n");
+    return 0;
+}
+
+void* BAT_manager(char* dir_string){
+    printf("[BATMAN]Starting BATMAN with - %s", dir_string);
+    BAT_manager_init();
+    printf("[BATMAN] Queue threads created, now carty cars!\n");
+
+    char current_dir = dir_string[0];
+    Directions enum_current_dir;
+    int i = 0;
+    while (current_dir != '\n'){
+        enum_current_dir = chr_to_enum(current_dir);
+        arrive(enum_current_dir);
+        if (i == 0){
+            i++;
+            continue;
+        }
+        check();
+        i++;
+        current_dir = dir_string[i];
+    }
+    while (done != 0){
+        check();
+    }
+    printf("[BATMAN] MORTAL, I AM D O N E!\n");
+    return NULL;
+
+}
+
+void check(){
+    pthread_mutex_lock(&mutex);
+    int conflict = bit_mask[0] + bit_mask[1] + bit_mask[2] + bit_mask[3];
+    pthread_mutex_unlock(&mutex);
+//    If there are no cars, we are done
+    if (conflict == 0){
+        done = 1;
+    }
+    // If only one car wants to pass
+    else if (conflict == 1){
+        for(int i = 0; i<4; i++){
+            if (bit_mask[i]){
+                pthread_cond_signal(&cond_array[i+1]);
+            }
+        }
+    }
+//    If there is a conflict
+    else{
+        printf("CONFLICT\n");
+    }
+}
 
 
 void* queue_start(void* arg){
@@ -114,6 +176,11 @@ void* BAT_manager(char* dir_string){
     printf("[BATMAN] MORTAL, I AM D O N E!\n");
     return NULL;
 
+    bit_mask[0] = 0;
+    bit_mask[1] = 0;
+    bit_mask[2] = 0;
+    bit_mask[3] = 0;
+
 }
 
 void initialize_thread_array(){
@@ -143,7 +210,6 @@ void initialize_thread_array(){
     priority_queue[1] = east;
     priority_queue[2] = south;
     priority_queue[3] = west;
-
 }
 
 int main() {

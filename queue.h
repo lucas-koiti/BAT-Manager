@@ -1,9 +1,11 @@
 //
 // Created by ferragut on 28/09/2019.
 //
+#include "global.h"
 
 #ifndef EXP1_QUEUE_H
 
+// Definitions
 typedef struct QueueItemStruct{
     void* item;
     struct QueueItemStruct* next;
@@ -14,10 +16,14 @@ typedef struct QueueStruct{
     QueueItem* firstItem;
 } Queue ;
 
+// Global Var
+Queue* priority_queue[4];
+// Functions
 Queue* create_queue();
 void push(Queue* queue, void* new_item);
 QueueItem* pop(Queue* queue);
 int is_empty(Queue* queue);
+QueueItem* peek(Queue* queue);
 
 /*   create_queue creates a new Queue
  * */
@@ -80,19 +86,6 @@ int is_empty(Queue* queue){
         return 0;
 }
 
-void print_queue(Queue* queue){
-    QueueItem* current_node = queue->firstItem;
-
-    if (is_empty(queue)){
-        printf("Queue Empty!\n");
-        return;
-    }
-    while(current_node != NULL){
-        int * item_ptr = current_node->item;
-        printf("Value:%d\n", *item_ptr);
-        current_node = current_node->next;
-    }
-}
 
 #define EXP1_QUEUE_H
 
