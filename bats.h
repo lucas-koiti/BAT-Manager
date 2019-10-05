@@ -12,6 +12,18 @@ typedef enum  possible_directions{
     WEST
 } Directions;
 
+typedef struct batStruct{
+    Directions dir;
+    int car_number;
+}BAT;
+
+BAT* new_car(int number, Directions dir){
+    BAT* car = malloc(sizeof(BAT));
+    car->dir = dir;
+    car->car_number = number + 1;
+    return car;
+}
+
 char enum_to_chr(Directions dir){
     char chr_dir;
     switch (dir){
@@ -30,6 +42,7 @@ char enum_to_chr(Directions dir){
     }
     return chr_dir;
 }
+
 
 char chr_to_enum(char dir){
     Directions enum_dir;
