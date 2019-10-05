@@ -69,7 +69,7 @@ void arrive(Directions dir){
 }
 
 void car_exit(BAT* current_car){
-    printf("BAT %d from %c saiu do cruzamento\n", current_car->car_number, enum_to_chr(current_car->dir));
+    printf("BAT %d %c saiu do cruzamento\n", current_car->car_number, enum_to_chr(current_car->dir));
     switch (current_car->dir){
         case NORTH:
             pop(priority_queue[0]);
@@ -97,8 +97,8 @@ void cross(BAT* current_car){
 void* BAT_manager(char* dir_string){
     printf("[BATMAN]Starting BATMAN with - %s", dir_string);
     BAT_manager_init();
-
     printf("[BATMAN] Threads created, now carty cars!\n");
+
     char current_dir = dir_string[0];
     Directions enum_current_dir;
     int i = 0;
