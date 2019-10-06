@@ -133,10 +133,11 @@ void check_for_conflict(){
                 if (starved_print == 0){
                     printf(" sinalizando %c para ir\n", enum_to_chr(current_dir));
                 }
-                while (car_crossed == 0 && starved == 0){
-                    pthread_mutex_unlock(&mutex);
-                    pthread_mutex_lock(&mutex);
-                }
+
+                pthread_mutex_unlock(&mutex);
+                while (car_crossed == 0 && starved == 0){}
+                pthread_mutex_lock(&mutex);
+
                 if (starved){
                     starved = 0;
                     starved_print = 1;
@@ -175,8 +176,12 @@ void* queue_thread(void* arg){
     while(queue->size != 0){
         current_car = (BAT*)peek(queue);
 //        Waiting for permission to cross
-        while (should_cross[queue_dir] == 0 || car_crossed == 1){}
         pthread_mutex_lock(&mutex);
+        while (should_cross[queue_dir] == 0){
+            pthread_mutex_unlock(&mutex);
+            pthread_mutex_lock(&mutex);
+        }
+
         int conflict = bit_mask[0] + bit_mask[1] + bit_mask[2] + bit_mask[3];
         if ((queue->size > K) && (current_car->starved_bool == 0) && (conflict > 1)){
             current_car->starved_bool = 1;
@@ -185,6 +190,7 @@ void* queue_thread(void* arg){
             cross(current_car);
             car_crossed = 1;
         }
+        should_cross[queue_dir] = 0;
         pthread_mutex_unlock(&mutex);
     }
     pthread_exit(NULL);
