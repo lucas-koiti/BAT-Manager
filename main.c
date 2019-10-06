@@ -176,10 +176,9 @@ void* queue_thread(void* arg){
     while(queue->size != 0){
         current_car = (BAT*)peek(queue);
 //        Waiting for permission to cross
-
+        pthread_mutex_lock(&mutex);
         while (should_cross[queue_dir] == 0){
             pthread_mutex_unlock(&mutex);
-            sleep(1);
             pthread_mutex_lock(&mutex);
         }
 
@@ -191,8 +190,8 @@ void* queue_thread(void* arg){
             cross(current_car);
             car_crossed = 1;
         }
+        should_cross[queue_dir] = 0;
         pthread_mutex_unlock(&mutex);
-        sleep(1);
     }
     pthread_exit(NULL);
 }
