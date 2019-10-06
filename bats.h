@@ -6,21 +6,25 @@
 #include "queue.h"
 #include <unistd.h>
 
+
 typedef enum  possible_directions{
-    NORTH = 1,
-    SOUTH,
+    NORTH = 0,
     EAST,
+    SOUTH,
     WEST
 } Directions;
 
 typedef struct batStruct{
     Directions dir;
     int car_number;
+    int starved_bool;
 }BAT;
 
 // Functions Prototype
 BAT* new_car(int number, Directions dir);
-void car_exit(BAT* current_car);
+void cross(BAT* current_car);
+void arrive(BAT* car, int index);
+void check_for_new_cars();
 char enum_to_chr(Directions dir);
 char chr_to_enum(char dir);
 
@@ -30,11 +34,12 @@ BAT* new_car(int number, Directions dir){
     BAT* car = malloc(sizeof(BAT));
     car->dir = dir;
     car->car_number = number;
+    car->starved_bool = 0;
     return car;
 }
 
-// Function that triggers everytime a car exits
-void car_exit(BAT* current_car){
+// Function that triggers everytime a car crosses
+void cross(BAT* current_car){
     printf("BAT %d %c saiu do cruzamento\n", current_car->car_number, enum_to_chr(current_car->dir));
     switch (current_car->dir){
         case NORTH:
@@ -52,12 +57,24 @@ void car_exit(BAT* current_car){
     }
 }
 
-// Function that triggers everytime a car crosses
-void cross(BAT* current_car){
-    pthread_mutex_lock(&mutex);
-    sleep(1);
-    car_exit(current_car);
-    pthread_mutex_unlock(&mutex);
+// Function that is triggred everytime a car arrives
+void arrive(BAT* car, int index){
+    bit_mask[index] = 1;
+    printf("BAT %d %c chegou no cruzamento\n", car->car_number, enum_to_chr(car->dir));
+}
+
+
+/*  Checks if there are any cars that want to cross
+ * */
+void check_for_new_cars(){
+    for(int i = 0; i<4; i++){
+        if(priority_queue[i]->size != 0){
+            if (bit_mask[i] == 0){
+                BAT* car = (BAT*)peek(priority_queue[i]);
+                arrive(car, i);
+            }
+        }
+    }
 }
 
 // Transforms a enum Directions to a char
@@ -101,24 +118,6 @@ char chr_to_enum(char dir){
     return enum_dir;
 }
 
-int int_to_enum(int dir){
-    Directions enum_dir;
-    switch (dir){
-        case 1:
-            enum_dir = NORTH;
-            break;
-        case 'E':
-            enum_dir = EAST;
-            break;
-        case 'S':
-            enum_dir = SOUTH;
-            break;
-        case 'W':
-            enum_dir = WEST;
-            break;
-    }
-    return enum_dir;
-}
 
 #define EXP1_STRUCTS_H
 
