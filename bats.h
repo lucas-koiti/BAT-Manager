@@ -20,7 +20,6 @@ typedef struct batStruct{
 
 // Functions Prototype
 BAT* new_car(int number, Directions dir);
-void arrive(Directions dir);
 void car_exit(BAT* current_car);
 char enum_to_chr(Directions dir);
 char chr_to_enum(char dir);
@@ -30,29 +29,10 @@ char chr_to_enum(char dir);
 BAT* new_car(int number, Directions dir){
     BAT* car = malloc(sizeof(BAT));
     car->dir = dir;
-    car->car_number = number + 1;
+    car->car_number = number;
     return car;
 }
 
-void arrive(Directions dir){
-    BAT* current_car = new_car(total_car_number, dir);
-    total_car_number++;
-    printf("BAT %d %c chegou no cruzamento\n", current_car->car_number, enum_to_chr(current_car->dir));
-    switch (current_car->dir){
-        case NORTH:
-            push(priority_queue[0], current_car);
-            break;
-        case EAST:
-            push(priority_queue[1], current_car);
-            break;
-        case SOUTH:
-            push(priority_queue[2], current_car);
-            break;
-        case WEST:
-            push(priority_queue[3], current_car);
-            break;
-    }
-}
 
 void car_exit(BAT* current_car){
     printf("BAT %d %c saiu do cruzamento\n", current_car->car_number, enum_to_chr(current_car->dir));
@@ -104,6 +84,25 @@ char chr_to_enum(char dir){
     dir = toupper(dir);
     switch (dir){
         case 'N':
+            enum_dir = NORTH;
+            break;
+        case 'E':
+            enum_dir = EAST;
+            break;
+        case 'S':
+            enum_dir = SOUTH;
+            break;
+        case 'W':
+            enum_dir = WEST;
+            break;
+    }
+    return enum_dir;
+}
+
+int int_to_enum(int dir){
+    Directions enum_dir;
+    switch (dir){
+        case 1:
             enum_dir = NORTH;
             break;
         case 'E':

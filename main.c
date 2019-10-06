@@ -9,11 +9,12 @@
 void initialize_thread_array();
 void BAT_manager_init();
 void* BAT_manager(char* dir_string);
-void* queue_start(void* arg);
-void check();
+void* queue_thread(void* arg);
+void check_for_conflict();
+void check_for_new_cars();
+void put_in_priority_queue(Directions dir);
 
 int main() {
-    printf("Starting program!\n");
     char    *buffer;
     size_t  n = 1024;
     buffer = malloc(n);
@@ -23,44 +24,48 @@ int main() {
     while(getline(&buffer, &n, stdin) != 1){
         BAT_manager(buffer);
     }
-    printf("Bye Bye!\n");
     return 0;
 }
 
 void* BAT_manager(char* dir_string){
-    printf("[BATMAN]Starting BATMAN with - %s", dir_string);
-    BAT_manager_init();
-    printf("[BATMAN] Queue threads created, now carty cars!\n");
-
-    char current_dir = dir_string[0];
-    Directions enum_current_dir;
     int i = 0;
-    while (current_dir != '\n'){
+//    Putting all the cars in their respective queues
+    char current_dir = dir_string[0];
+    BAT* current_car;
+    Directions enum_current_dir;
+    while(current_dir != '\n'){
         enum_current_dir = chr_to_enum(current_dir);
-        arrive(enum_current_dir);
-        if (i == 0){
-            i++;
-            continue;
-        }
-        check();
-        i++;
-        current_dir = dir_string[i];
+        current_car = new_car(++total_car_number, enum_current_dir);
+        push(priority_queue[enum_current_dir-1], current_car);
+        current_dir = dir_string[++i];
     }
-    while (done != 0){
-        check();
+
+    BAT_manager_init();
+    while(!done){
+        check_for_new_cars();
+        check_for_conflict();
     }
-    printf("[BATMAN] MORTAL, I AM D O N E!\n");
     return NULL;
 
 }
 
-void check(){
+/*  BATMAN function that checks for conflicts or if the process is done
+ * */
+void check_for_conflict(){
     pthread_mutex_lock(&mutex);
     int conflict = bit_mask[0] + bit_mask[1] + bit_mask[2] + bit_mask[3];
     pthread_mutex_unlock(&mutex);
-//    If there are no cars, we are done
+
+    // If there are no cars, we are done
     if (conflict == 0){
-        done = 1;
+        // Check if there are no more cars left to deal with
+        int empty = 0;
+        for(int i = 0; i<0; i++){
+            empty += priority_queue[i]->size;
+        }
+        if (empty == 0 ){
+            done = 1;
+        }
     }
     // If only one car wants to pass
     else if (conflict == 1){
@@ -72,45 +77,57 @@ void check(){
     }
 //    If there is a conflict
     else{
-        printf("CONFLICT\n");
+    }
+}
+
+void arrive(BAT* car, int index){
+    bit_mask[index] = 1;
+    printf("BAT %d %c chegou no cruzamento\n", car->car_number, enum_to_chr(car->dir));
+}
+
+
+/*  Checks if there are any cars that want to cross
+ * */
+void check_for_new_cars(){
+    for(int i = 0; i<4; i++){
+        if(priority_queue[i]->size != 0){
+            pthread_mutex_lock(&mutex);
+            if (bit_mask[i] == 0){
+                BAT* car = (BAT*)peek(priority_queue[i]);
+                arrive(car, i);
+            }
+            pthread_mutex_unlock(&mutex);
+        }
     }
 }
 
 
-void* queue_start(void* arg){
+/*  Function that deals with each queue's logic
+ * */
+void* queue_thread(void* arg){
     Directions* dir_ptr = (Directions*) arg;
     Directions queue_dir = *dir_ptr;
-    int i = 0;
-    pthread_cond_signal(&cond_array[0]);
-    printf("[QUEUE %c]I am going to wait for the carty cars!\n", enum_to_chr(queue_dir));
-//    Waiting for permission to make carts go
-    while(i != 3){
+    Queue* queue = priority_queue[queue_dir-1];
+    free(dir_ptr);
+//    While this thread's queue is not empty
+
+    while(queue->size != 0){
+        BAT* current_car = (BAT*)peek(queue);
+//        Waiting for permission to cross
         pthread_cond_wait(&cond_array[queue_dir], &mutex);
-        i++;
-        printf("[QUEUE %c] CART WENT VROOM VROOM\n", enum_to_chr(queue_dir));
-        pthread_cond_signal(&cond_array[0]);
+        cross(current_car);
     }
-    printf("[QUEUE %c]I am done! Bye Bye...\n", enum_to_chr(queue_dir));
     pthread_exit(NULL);
 }
 
 void BAT_manager_init(){
-    Directions dir =  NORTH;
-    pthread_create(&dir_array[0], NULL, queue_start, &dir);
-    pthread_cond_wait(&cond_array[0], &mutex);
-    dir = EAST;
-    pthread_create(&dir_array[1], NULL, queue_start, &dir);
-    pthread_cond_wait(&cond_array[0], &mutex);
-    dir = SOUTH;
-    pthread_create(&dir_array[2], NULL, queue_start, &dir);
-    pthread_cond_wait(&cond_array[0], &mutex);
-    dir = WEST;
-    pthread_create(&dir_array[3], NULL, queue_start, &dir);
-    pthread_cond_wait(&cond_array[0], &mutex);
-    bit_mask[0] = 0;
-    bit_mask[1] = 0;
-    bit_mask[2] = 0;
-    bit_mask[3] = 0;
+    Directions* arg_dir;
+    for(int i = 0; i<4; i++){
+        bit_mask[i] = 0;
+        arg_dir = malloc(sizeof(Directions));
+        *arg_dir = (Directions) i+1;
+        pthread_create(&dir_array[i], NULL, queue_thread, arg_dir);
+    }
 }
 
 void initialize_thread_array(){
