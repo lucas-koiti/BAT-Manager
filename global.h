@@ -6,8 +6,6 @@
 
 // Global variables
 pthread_mutex_t mutex;
-pthread_cond_t cond_array[5];
-pthread_cond_t batman, north_queue, east_queue, south_queue, west_queue;
 pthread_t dir_array[4];
 pthread_attr_t attr;
 

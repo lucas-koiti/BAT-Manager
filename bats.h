@@ -38,8 +38,6 @@ BAT* new_car(int number, Directions dir){
     return car;
 }
 
-
-
 // Function that triggers everytime a car crosses
 void cross(BAT* current_car){
     printf("BAT %d %c saiu do cruzamento\n", current_car->car_number, enum_to_chr(current_car->dir));
