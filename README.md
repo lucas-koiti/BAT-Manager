@@ -1,7 +1,7 @@
 # BATMAN - A BAT manager
 
 Repository for the "Operating System" course assigment.
-Further explanation and context can be found here.
+Further explanation and context can be found [here (in portuguese)](https://lasca.ic.unicamp.br/paulo/courses/so/2019s2/exp/exp01/exp01.html).
 
 
 Made with C and the POSIX Thread library.

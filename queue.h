@@ -18,6 +18,7 @@ typedef struct QueueStruct{
 
 // Global Var
 Queue* priority_queue[4];
+
 // Functions
 Queue* create_queue();
 void push(Queue* queue, void* new_item);
@@ -25,8 +26,7 @@ QueueItem* pop(Queue* queue);
 int is_empty(Queue* queue);
 QueueItem* peek(Queue* queue);
 
-/*   create_queue creates a new Queue
- * */
+
 Queue* create_queue(){
     Queue* new_queue = malloc(sizeof(Queue));
     new_queue->size = 0;
@@ -66,7 +66,7 @@ QueueItem* pop(Queue* queue){
     queue->firstItem = next_node;
     free(current_node);
     queue->size--;
-    return current_node;
+    return current_node->item;
 
 }
 
@@ -75,7 +75,7 @@ QueueItem* peek(Queue* queue){
         return NULL;
     }
     QueueItem* current_node = queue->firstItem;
-    return current_node;
+    return current_node->item;
 
 }
 
@@ -85,7 +85,6 @@ int is_empty(Queue* queue){
     else
         return 0;
 }
-
 
 #define EXP1_QUEUE_H
 
