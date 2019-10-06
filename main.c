@@ -12,7 +12,6 @@ void* BAT_manager(char* dir_string);
 void* queue_thread(void* arg);
 void check_for_conflict();
 void check_for_new_cars();
-void put_in_priority_queue(Directions dir);
 
 int main() {
     char    *buffer;
@@ -27,6 +26,7 @@ int main() {
     return 0;
 }
 
+// Main function for the BAT manager
 void* BAT_manager(char* dir_string){
     int i = 0;
 //    Putting all the cars in their respective queues
@@ -39,8 +39,9 @@ void* BAT_manager(char* dir_string){
         push(priority_queue[enum_current_dir-1], current_car);
         current_dir = dir_string[++i];
     }
-
+//    Init BAT queues and vars
     BAT_manager_init();
+//    BAT main loop, done is set by check_for_conflicts
     while(!done){
         check_for_new_cars();
         check_for_conflict();
@@ -50,13 +51,16 @@ void* BAT_manager(char* dir_string){
 }
 
 /*  BATMAN function that checks for conflicts or if the process is done
+ * TODO: Conflict == 1, let that one car pass
+ * TODO: Conflict > 1, solve the conflict, consider starvation
  * */
 void check_for_conflict(){
     pthread_mutex_lock(&mutex);
-    int conflict = bit_mask[0] + bit_mask[1] + bit_mask[2] + bit_mask[3];
-    pthread_mutex_unlock(&mutex);
 
-    // If there are no cars, we are done
+//    There is only a direct conflict if the sum of the bits is bigger than one
+    int conflict = bit_mask[0] + bit_mask[1] + bit_mask[2] + bit_mask[3];
+
+    // If there are no cars (conflict == 0), we are done
     if (conflict == 0){
         // Check if there are no more cars left to deal with
         int empty = 0;
@@ -76,10 +80,17 @@ void check_for_conflict(){
         }
     }
 //    If there is a conflict
+//    TODO: For each bit in the bitmask, try to signal the best queue
+//      Wait for possible starvation (global var)
+//      If no starvation, return from function (only one car pass for each conflict)
+//      If there is starvation, try to find next queue
+//      Worst case, signal goes to the same queue, but now it accepts (because only one pass is admitted for each queue)
     else{
     }
+    pthread_mutex_unlock(&mutex);
 }
 
+// Function that is triggred everytime a car arrives
 void arrive(BAT* car, int index){
     bit_mask[index] = 1;
     printf("BAT %d %c chegou no cruzamento\n", car->car_number, enum_to_chr(car->dir));
