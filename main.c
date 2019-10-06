@@ -11,18 +11,30 @@ void BAT_manager_init();
 void* BAT_manager(char* dir_string);
 void* queue_thread(void* arg);
 void check_for_conflict();
-void check_for_new_cars();
+void BAT_manager_destroy();
 
 int main() {
     char    *buffer;
     size_t  n = 1024;
     buffer = malloc(n);
     initialize_thread_array();
-
+    char* k_string;
+    int k_int;
     // While an empty line is not read, continue reading
     while(getline(&buffer, &n, stdin) != 1){
-        BAT_manager(buffer);
+        done = 0;
+        if (buffer[0] == 'K'){
+            k_string = &buffer[2];
+            char* new_line;
+            k_int = (int)strtol(k_string, &new_line,10);
+            K = k_int;
+        }
+        else{
+            BAT_manager(buffer);
+        }
     }
+    free(buffer);
+    BAT_manager_destroy();
     return 0;
 }
 
@@ -36,7 +48,7 @@ void* BAT_manager(char* dir_string){
     while(current_dir != '\n'){
         enum_current_dir = chr_to_enum(current_dir);
         current_car = new_car(++total_car_number, enum_current_dir);
-        push(priority_queue[enum_current_dir-1], current_car);
+        push(priority_queue[enum_current_dir], current_car);
         current_dir = dir_string[++i];
     }
 //    Init BAT queues and vars
@@ -55,8 +67,6 @@ void* BAT_manager(char* dir_string){
  * TODO: Conflict > 1, solve the conflict, consider starvation
  * */
 void check_for_conflict(){
-    pthread_mutex_lock(&mutex);
-
 //    There is only a direct conflict if the sum of the bits is bigger than one
     int conflict = bit_mask[0] + bit_mask[1] + bit_mask[2] + bit_mask[3];
 
@@ -75,58 +85,105 @@ void check_for_conflict(){
     else if (conflict == 1){
         for(int i = 0; i<4; i++){
             if (bit_mask[i]){
-                pthread_cond_signal(&cond_array[i+1]);
+                pthread_mutex_lock(&mutex);
+                should_cross[i] = 1;
+                while(car_crossed == 0) {
+                    pthread_mutex_unlock(&mutex);
+                    pthread_mutex_lock(&mutex);
+                }
+                should_cross[i] = 0;
+                car_crossed = 0;
+                bit_mask[i] = 0;
+                pthread_mutex_unlock(&mutex);
             }
         }
     }
 //    If there is a conflict
-//    TODO: For each bit in the bitmask, try to signal the best queue
+//      For each bit in the bitmask, try to signal the best queue
 //      Wait for possible starvation (global var)
 //      If no starvation, return from function (only one car pass for each conflict)
 //      If there is starvation, try to find next queue
-//      Worst case, signal goes to the same queue, but now it accepts (because only one pass is admitted for each queue)
+//      Worst case, signal goes to the same BAT, but now it accepts (because only one pass is admitted for each BAT)
     else{
-    }
-    pthread_mutex_unlock(&mutex);
-}
+        printf("Impasses: ");
+        int first = 1;
+        for (int i = 0; i<4; i++){
 
-// Function that is triggred everytime a car arrives
-void arrive(BAT* car, int index){
-    bit_mask[index] = 1;
-    printf("BAT %d %c chegou no cruzamento\n", car->car_number, enum_to_chr(car->dir));
-}
-
-
-/*  Checks if there are any cars that want to cross
- * */
-void check_for_new_cars(){
-    for(int i = 0; i<4; i++){
-        if(priority_queue[i]->size != 0){
-            pthread_mutex_lock(&mutex);
-            if (bit_mask[i] == 0){
-                BAT* car = (BAT*)peek(priority_queue[i]);
-                arrive(car, i);
+            if (first && bit_mask[i] != 0){
+                printf("%c", enum_to_chr(i));
+                first = 0;
+            } else if (bit_mask[i]){
+                printf(",%c", enum_to_chr(i));
             }
-            pthread_mutex_unlock(&mutex);
         }
+
+        int current_dir = -1;
+        int starved_print = 0;
+        pthread_mutex_lock(&mutex);
+        while (car_crossed == 0){
+            current_dir++;
+            current_dir = current_dir % 4;
+            if (bit_mask[current_dir] != 0){
+                should_cross[current_dir] = 1;
+                if (starved_print == 0){
+                    printf(" sinalizando %c para ir\n", enum_to_chr(current_dir));
+                }
+                while (car_crossed == 0 && starved == 0){
+                    pthread_mutex_unlock(&mutex);
+                    pthread_mutex_lock(&mutex);
+                }
+                if (starved){
+                    starved = 0;
+                    starved_print = 1;
+                    should_cross[current_dir] = 0;
+                    BAT* next_bat;
+                    BAT* starved_bat = (BAT*)peek(priority_queue[current_dir]);
+                    int i = (current_dir+1)%4;
+                    while (bit_mask[i] == 0){
+                        i++;
+                        i = i%4;
+                    }
+                    next_bat = (BAT*)peek(priority_queue[i]);
+                    printf("BAT %d %c cedeu passagem BAT %d %c\n",starved_bat->car_number, enum_to_chr(starved_bat->dir), next_bat->car_number, enum_to_chr(next_bat->dir));
+                    continue;
+                }
+            }
+        }
+        should_cross[current_dir] = 0;
+        bit_mask[current_dir] = 0;
+        car_crossed = 0;
+        pthread_mutex_unlock(&mutex);
     }
 }
-
 
 /*  Function that deals with each queue's logic
  * */
 void* queue_thread(void* arg){
     Directions* dir_ptr = (Directions*) arg;
     Directions queue_dir = *dir_ptr;
-    Queue* queue = priority_queue[queue_dir-1];
+    Queue* queue = priority_queue[queue_dir];
+    BAT* current_car;
     free(dir_ptr);
-//    While this thread's queue is not empty
 
+
+//    While this thread's queue is not empty
     while(queue->size != 0){
-        BAT* current_car = (BAT*)peek(queue);
+        current_car = (BAT*)peek(queue);
 //        Waiting for permission to cross
-        pthread_cond_wait(&cond_array[queue_dir], &mutex);
-        cross(current_car);
+        do{
+            pthread_mutex_unlock(&mutex);
+            pthread_mutex_lock(&mutex);
+        } while (should_cross[queue_dir] == 0);
+        int conflict = bit_mask[0] + bit_mask[1] + bit_mask[2] + bit_mask[3];
+        if ((queue->size > K) && (current_car->starved_bool == 0) && (conflict > 1)){
+            current_car->starved_bool = 1;
+            starved = 1;
+        } else{
+            cross(current_car);
+            car_crossed = 1;
+        }
+        pthread_mutex_unlock(&mutex);
+        sleep(1);
     }
     pthread_exit(NULL);
 }
@@ -136,28 +193,21 @@ void BAT_manager_init(){
     for(int i = 0; i<4; i++){
         bit_mask[i] = 0;
         arg_dir = malloc(sizeof(Directions));
-        *arg_dir = (Directions) i+1;
-        pthread_create(&dir_array[i], NULL, queue_thread, arg_dir);
+        *arg_dir = (Directions) i;
+        pthread_create(&dir_array[i], &attr, queue_thread, arg_dir);
     }
 }
 
 void initialize_thread_array(){
-    pthread_mutex_t main_mutex;
-    pthread_cond_t main, north_queue, east_queue, south_queue, west_queue;
+    pthread_mutex_init(&mutex, NULL);
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
-    pthread_mutex_init(&main_mutex, NULL);
-    pthread_cond_init(&main, NULL);
-    pthread_cond_init(&north_queue, NULL);
-    pthread_cond_init(&east_queue, NULL);
-    pthread_cond_init(&south_queue, NULL);
-    pthread_cond_init(&west_queue, NULL);
-
-    cond_array[0] = main;
+    cond_array[0] = batman;
     cond_array[1] = north_queue;
     cond_array[2] = east_queue;
     cond_array[3] = south_queue;
     cond_array[4] = west_queue;
-    mutex = main_mutex;
 
     Queue* north = create_queue();
     Queue* east = create_queue();
@@ -169,4 +219,12 @@ void initialize_thread_array(){
     priority_queue[2] = south;
     priority_queue[3] = west;
 
+}
+
+void BAT_manager_destroy(){
+    pthread_mutex_destroy(&mutex);
+    pthread_attr_destroy(&attr);
+    for (int i = 0; i < 4; ++i) {
+        free(priority_queue[i]);
+    }
 }
